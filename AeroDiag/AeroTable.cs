@@ -9,12 +9,21 @@ namespace AeroDiag
 {
     internal class AeroTableElem
     {
-        double pressure;
-        double height;
-        double temperature;
-        double mixratio;
-        double direction;
-        double speed;
+        private double pressure;
+        private double height;
+        private double temperature;
+        private double mixratio;
+        private double direction;
+        private double speed;
+        // доп. параметры
+        private double humidity;
+        private double dewpoint;
+        private double thetae;
+
+        public AeroTableElem(string levelStr)
+        {
+            
+        }
     }
 
     internal class AeroTable
