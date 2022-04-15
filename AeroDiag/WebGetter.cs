@@ -41,7 +41,7 @@ namespace AeroDiag
             }
             catch (Exception e)
             {
-                result = $"Error: {e.Message}, source:{e.Source}, trace:{e.StackTrace}";
+                result = $"Error: {e.Message},\r\n source:{e.Source},\r\n trace:{e.StackTrace}";
             }
             return ok;
         }

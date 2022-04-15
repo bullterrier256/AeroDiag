@@ -9,6 +9,7 @@ namespace AeroDiag
 
         private void loadAeroDataButton_Click(object sender, EventArgs e)
         {
+            loadAeroDataButton.Enabled = false;
             string aeroData;
             DateTime date = dateComboBox.Value;
             int year = date.Year;
@@ -20,6 +21,7 @@ namespace AeroDiag
                 , out aeroData
             );
             aeroDataText.Text = ok ? aeroData.Replace("\n", "\r\n") : "нет данных. \r\n" + aeroData;
+            loadAeroDataButton.Enabled = true;
         }
 
         private void Form1_Load(object sender, EventArgs e)

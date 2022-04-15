@@ -16,10 +16,16 @@ namespace AeroDiag
         private double? mixratio;
         private double? direction;
         private double? speed;
+        private double? speedms;
         // доп. параметры
         private double? humidity;
         private double? dewpoint;
         private double? thetae;
+        // cape etc
+        private double? plcl;
+        private double? cape;
+        private double? cin;
+        private double? lftx;
 
         public AeroTableElem(string levelStr)
         {
@@ -64,6 +70,10 @@ namespace AeroDiag
                         break;
                     default:
                         break;
+                }
+                if (speed is not null)
+                {
+                    speedms = MeteoMath.KnotsToMetersPerSecond((double)speed);
                 }
                 pos += 7;
             }
@@ -129,17 +139,20 @@ namespace AeroDiag
             result += ValToStr(mixratio, 2);
             result += ValToStr(direction, 0);
             result += ValToStr(speed, 0);
+            result += ValToStr(speedms, 1);
             result += ValToStr(thetae, 1);
+            result += ValToStr(plcl, 1);
+            result += ValToStr(cape, 1);
             return result;
         }
 
         public static string GetHeader()
         {
             string header;
-            header =  "===============================================================\r\n";
-            header += "   PRES    HGT   TEMP   DWPT   RELH   MIXR   DRCT   SKNT   THTE\r\n";
-            header += "    HPA      M      C      C      %   G/KG    DEG   KNOT      K\r\n";
-            header += "===============================================================\r\n";
+            header =  "====================================================================================\r\n";
+            header += "   PRES    HGT   TEMP   DWPT   RELH   MIXR   DRCT   SKNT    SMS   THTE   PLCL   CAPE\r\n";
+            header += "    HPA      M      C      C      %   G/KG    DEG   KNOT    M/S      K    HPA   J/KG\r\n";
+            header += "====================================================================================\r\n";
             return header;
         }
 
@@ -151,6 +164,16 @@ namespace AeroDiag
         public double? GetHgt()
         {
             return height;
+        }
+
+        public double? GetTmp()
+        {
+            return temperature;
+        }
+
+        public double? GetMixRatio()
+        {
+            return mixratio;
         }
     }
 
@@ -181,12 +204,17 @@ namespace AeroDiag
             result += "\r\n";
             result += "DIAGNOSTIC VALUES: \r\n";
 
-            bool has1000 = HasLevel(1000.0);
-            bool has500 = HasLevel(500.0);
+            double? hgt1000 = GetHeight(1000.0);
+            double? hgt500 = GetHeight(500.0);
 
-            result += $"Terrain height: {AeroTableElem.ValToStr(GetTerrainHeight(), 1, false)}";
+            result += $"Terrain height [m]: {AeroTableElem.ValToStr(GetTerrainHeight(), 1, false)}\r\n";
 
-            
+            if (hgt1000 != null && hgt500 != null)
+            {
+                result += $"1000 hPa to 500 hPa thickness[m]: {AeroTableElem.ValToStr((double)hgt500 - (double)hgt1000, 0, false)}\r\n";
+            }
+
+            result += $"Precipitable water [mm]: {AeroTableElem.ValToStr(GetPrecipitableWater(), 2, false)}";
 
             return result;
         }
@@ -236,18 +264,101 @@ namespace AeroDiag
         private double? GetTerrainHeight()
         {
             double? res = null;
+            double? bottomLevel = GetBottomLevel();
+            if (bottomLevel is not null)
+            {
+                res = GetHeight((double)bottomLevel);
+            }
+            return res;
+        }
+
+        private double? GetBottomLevel()
+        {
+            double? res = null;
             var el = table.First;
             if (el is not null)
             {
                 if (!el.Value.IsNotNullable())
                 {
                     el = el.Next;
-                    res = el.Value.GetHgt();
+                    res = el.Value.GetPres();
                 }
             }
             return res;
         }
 
+        private double? GetTemperature(double level)
+        {
+            double? result = null;
+            AeroTableElem? elem = GetLevel(level);
+            if (elem is not null)
+            {
+                result = elem.GetTmp();
+            }
+            return result;
+        }
+
+        private double? GetHeight(double level)
+        {
+            double? result = null;
+            AeroTableElem? elem = GetLevel(level);
+            if (elem is not null)
+            {
+                result = elem.GetHgt();
+            }
+            return result;
+        }
+
+        public double? GetPrecipitableWater()
+        {
+            double? result = null;
+            double? bottomLevel = GetBottomLevel();
+            var elem = table.First;
+            double? prevMixRat = null;
+            double? prevPres = null;
+            double? currentPres = null;
+            double? currentMixRat = null;
+            if (bottomLevel is not null) {
+                while (elem != null)
+                {
+                    elem = elem.Next;
+                    AeroTableElem tabElem = elem.Value;
+                    prevPres = currentPres;
+                    currentPres = tabElem.GetPres();
+                    if (currentPres is null)
+                    {
+                        break;
+                    }
+                    if (currentPres == bottomLevel)
+                    {
+                        currentMixRat = tabElem.GetMixRatio();
+                        if (currentMixRat is null)
+                        {
+                            break;
+                        }
+                        result = 0;
+                    }
+                    if (currentPres < bottomLevel)
+                    {
+                        prevMixRat = currentMixRat;
+                        currentMixRat = tabElem.GetMixRatio();
+                        if (currentMixRat is null)
+                        {
+                            break;
+                        }
+                        result += (0.5 * (currentMixRat + prevMixRat) * (prevPres - currentPres)) / (9.97 * MeteoMath.GetGravity());
+                    }
+                }
+            }
+            return result;
+        }
+
+        //TLCL = (((1/(1/(SDP - 56) + Math.log (ST/SDP)/800)) + 56) - 273.16);
+        //PLCL = (SP* Math.pow(((TLCL + 273.16) / ST), (7/2) ) ) / 1000;
+
+        //document.lcl.PLCLP.value = PLCL* 1000; //Pa
+        // SP - surface pressure kPa
+        // ST - surface temperature
         #endregion
     }
 }
