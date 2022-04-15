@@ -35,12 +35,14 @@ namespace AeroDiag
                 if (!html.Contains("<PRE>") || !html.Contains("</PRE>"))
                     throw new Exception("Нет данных для считывания");
                 int firstChar = html.IndexOf("<PRE>") + 5;
-                result = html.Substring(html.IndexOf("<PRE>") + 5, html.IndexOf("</PRE>") - firstChar);
+                //result = html.Substring(html.IndexOf("<PRE>") + 5, html.IndexOf("</PRE>") - firstChar);
+                AeroTable tab = new AeroTable(html.Substring(html.IndexOf("<PRE>") + 5, html.IndexOf("</PRE>") - firstChar));
+                result = tab.ToStr();
                 ok = true;
             }
             catch (Exception e)
             {
-                result = $"Error: {e.Message}";
+                result = $"Error: {e.Message}, source:{e.Source}, trace:{e.StackTrace}";
             }
             return ok;
         }
