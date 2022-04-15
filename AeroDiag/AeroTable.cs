@@ -68,7 +68,7 @@ namespace AeroDiag
                 pos += 7;
             }
         }
-        public bool IsNullable()
+        public bool IsNotNullable()
         {
             bool ok = (
                 pressure != null &&
@@ -83,7 +83,7 @@ namespace AeroDiag
             );
             return ok;
         }
-        public static string ValToStr(double? val, int countAfterPoint)
+        public static string ValToStr(double? val, int countAfterPoint, bool needAlign = true)
         {
             string result;
             if (val is null)
@@ -95,17 +95,24 @@ namespace AeroDiag
                 switch (countAfterPoint)
                 {
                     case 0:
-                        result = ((double)val).ToString("       ");
+                        result = ((double)val).ToString("f0");
                         break;
                     case 1:
-                        result = ((double)val).ToString("     .0");
+                        result = ((double)val).ToString("f1");
                         break;
                     case 2:
-                        result = ((double)val).ToString("    .00");
+                        result = ((double)val).ToString("f2");
                         break;
                     default:
                         result = "       ";
                         break;
+                }
+            }
+            if (needAlign)
+            {
+                while (result.Length < 7)
+                {
+                    result = " " + result;
                 }
             }
             return result;
@@ -129,11 +136,21 @@ namespace AeroDiag
         public static string GetHeader()
         {
             string header;
-            header = "===============================================================\r\n";
+            header =  "===============================================================\r\n";
             header += "   PRES    HGT   TEMP   DWPT   RELH   MIXR   DRCT   SKNT   THTE\r\n";
             header += "    HPA      M      C      C      %   G/KG    DEG   KNOT      K\r\n";
             header += "===============================================================\r\n";
             return header;
+        }
+
+        public double? GetPres()
+        {
+            return pressure;
+        }
+
+        public double? GetHgt()
+        {
+            return height;
         }
     }
 
@@ -160,9 +177,77 @@ namespace AeroDiag
             {
                 result += $"{elem.ToStr()}\r\n";
             }
+
+            result += "\r\n";
+            result += "DIAGNOSTIC VALUES: \r\n";
+
+            bool has1000 = HasLevel(1000.0);
+            bool has500 = HasLevel(500.0);
+
+            result += $"Terrain height: {AeroTableElem.ValToStr(GetTerrainHeight(), 1, false)}";
+
+            
+
             return result;
         }
+
+        private bool HasLevel (double level)
+        {
+            bool ok = false;
+            foreach (AeroTableElem elem in table)
+            {
+                double? pres;
+                pres = elem.GetPres();
+                if (pres is null)
+                {
+                    continue;
+                }
+                if ((double)pres == level)
+                {
+                    ok = true;
+                    break;
+                }
+            }
+            return ok;
+        }
+
+        private AeroTableElem? GetLevel(double level)
+        {
+            AeroTableElem? res = null;
+            foreach (AeroTableElem elem in table)
+            {
+                double? pres;
+                pres = elem.GetPres();
+                if (pres is null)
+                {
+                    continue;
+                }
+                if ((double)pres == level)
+                {
+                    res = elem;
+                    break;
+                }
+            }
+            return res;
+        }
+
+        #region diagnosticVals
+
+        private double? GetTerrainHeight()
+        {
+            double? res = null;
+            var el = table.First;
+            if (el is not null)
+            {
+                if (!el.Value.IsNotNullable())
+                {
+                    el = el.Next;
+                    res = el.Value.GetHgt();
+                }
+            }
+            return res;
+        }
+
+        #endregion
     }
-    
-    
 }
