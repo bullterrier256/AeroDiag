@@ -142,20 +142,23 @@ namespace AeroDiag
             result += ValToStr(speedms, 1);
             result += ValToStr(thetae, 1);
             result += ValToStr(plcl, 1);
-            result += ValToStr(cape, 1);
+            result += ValToStr(cape, 0);
+            result += ValToStr(cin, 0);
+            result += ValToStr(lftx, 1);
             return result;
         }
 
         public static string GetHeader()
         {
             string header;
-            header =  "====================================================================================\r\n";
-            header += "   PRES    HGT   TEMP   DWPT   RELH   MIXR   DRCT   SKNT    SMS   THTE   PLCL   CAPE\r\n";
-            header += "    HPA      M      C      C      %   G/KG    DEG   KNOT    M/S      K    HPA   J/KG\r\n";
-            header += "====================================================================================\r\n";
+            header =  "==================================================================================================\r\n";
+            header += "   PRES    HGT   TEMP   DWPT   RELH   MIXR   DRCT   SKNT    SMS   THTE   PLCL   CAPE    CIN   LFTX\r\n";
+            header += "    HPA      M      C      C      %   G/KG    DEG   KNOT    M/S      K    HPA   J/KG   J/KG      C\r\n";
+            header += "==================================================================================================\r\n";
             return header;
         }
 
+        #region GetSet
         public double? GetPres()
         {
             return pressure;
@@ -171,10 +174,48 @@ namespace AeroDiag
             return temperature;
         }
 
+        public double? GetDewPoint()
+        {
+            return dewpoint;
+        }
+
         public double? GetMixRatio()
         {
             return mixratio;
         }
+
+        public double? GetLiftedCondensationLevel()
+        {
+            return plcl;
+        }
+
+        public double? GetCape()
+        {
+            return cape;
+        }
+        public double? GetCin()
+        {
+            return cin;
+        }
+
+        public double? GetLftx()
+        {
+            return lftx;
+        }
+
+        public double? GetThetaE()
+        {
+            return thetae;
+        }
+
+        public void SetGammaW(double? plclVal, double? capeVal, double? cinVal, double? lftxVal)
+        {
+            plcl = plclVal;
+            cape = capeVal;
+            cin = cinVal;
+            lftx = lftxVal;
+        }
+        #endregion
     }
 
     internal class AeroTable
@@ -191,21 +232,56 @@ namespace AeroDiag
                 AeroTableElem elem = new AeroTableElem(items[i]);
                 table.AddLast(elem);
             }
+            SetGammaW();
         }
 
         public string ToStr()
         {
             string result = AeroTableElem.GetHeader();
+
+            double? plcl = null;
+            double? cape = null;
+            double? cin = null;
+            double? lftx = null;
+
+            double? muplcl = null;
+            double? mucape = null;
+            double? mucin = null;
+            double? mulftx = null;
+
+            double? bottomLevel = GetBottomLevel();
+            double? mostUnstableLevel = GetMostUnstableLevel();
+
+            double? hgt1000 = GetHeight(1000.0);
+            double? hgt500 = GetHeight(500.0);
+
             foreach (AeroTableElem elem in table)
             {
                 result += $"{elem.ToStr()}\r\n";
+                if (bottomLevel is not null)
+                {
+                    if (bottomLevel == elem.GetPres())
+                    {
+                        plcl = elem.GetLiftedCondensationLevel();
+                        cape = elem.GetCape();
+                        cin = elem.GetCin();
+                        lftx = elem.GetLftx();
+                    }
+                }
+                if (mostUnstableLevel is not null)
+                {
+                    if (mostUnstableLevel == elem.GetPres())
+                    {
+                        muplcl = elem.GetLiftedCondensationLevel();
+                        mucape = elem.GetCape();
+                        mucin = elem.GetCin();
+                        mulftx = elem.GetLftx();
+                    }
+                }
             }
 
             result += "\r\n";
             result += "DIAGNOSTIC VALUES: \r\n";
-
-            double? hgt1000 = GetHeight(1000.0);
-            double? hgt500 = GetHeight(500.0);
 
             result += $"Terrain height [m]: {AeroTableElem.ValToStr(GetTerrainHeight(), 1, false)}\r\n";
 
@@ -214,7 +290,52 @@ namespace AeroDiag
                 result += $"1000 hPa to 500 hPa thickness[m]: {AeroTableElem.ValToStr((double)hgt500 - (double)hgt1000, 0, false)}\r\n";
             }
 
-            result += $"Precipitable water [mm]: {AeroTableElem.ValToStr(GetPrecipitableWater(), 2, false)}";
+            result += $"Precipitable water [mm]: {AeroTableElem.ValToStr(GetPrecipitableWater(), 2, false)}\r\n";
+
+            if (plcl is not null)
+            {
+                result += $"Pressure of lifted codensation level [hPa]: {AeroTableElem.ValToStr(plcl, 1, false)}\r\n";
+            }
+
+            if (cape is not null)
+            {
+                result += $"Convective available potential energy [J/kg]: {AeroTableElem.ValToStr(cape, 2, false)}\r\n";
+            }
+
+            if (cin is not null)
+            {
+                result += $"Convective inhibition [J/kg]: {AeroTableElem.ValToStr(cin, 2, false)}\r\n";
+            }
+
+            if (lftx is not null)
+            {
+                result += $"Lifted index [C]: {AeroTableElem.ValToStr(lftx, 2, false)}\r\n";
+            }
+
+            if (mostUnstableLevel is not null)
+            {
+                result += $"Pressure of most unstable layer [hPa]: {AeroTableElem.ValToStr(mostUnstableLevel, 1, false)}\r\n";
+            }
+
+            if (muplcl is not null)
+            {
+                result += $"Pressure of lifted codensation level (Most Unstable) [hPa]: {AeroTableElem.ValToStr(muplcl, 1, false)}\r\n";
+            }
+
+            if (mucape is not null)
+            {
+                result += $"Most Unstable Convective available potential energy [J/kg]: {AeroTableElem.ValToStr(mucape, 2, false)}\r\n";
+            }
+
+            if (mucin is not null)
+            {
+                result += $"Most Unstable Convective inhibition [J/kg]: {AeroTableElem.ValToStr(mucin, 2, false)}\r\n";
+            }
+
+            if (mulftx is not null)
+            {
+                result += $"Most Unstable Lifted index [C]: {AeroTableElem.ValToStr(mulftx, 2, false)}\r\n";
+            }
 
             return result;
         }
@@ -281,10 +402,60 @@ namespace AeroDiag
                 if (!el.Value.IsNotNullable())
                 {
                     el = el.Next;
-                    res = el.Value.GetPres();
                 }
+                res = el.Value.GetPres();
             }
             return res;
+        }
+
+        private double? GetMostUnstableLevel()
+        {
+            double? res = null;
+            double? maxThetaE = null;
+            double? thetaE;
+            double? maxUnstableLevel = null;
+            double? bottomLevel = GetBottomLevel();
+            double? pres = null;
+            var el = table.First;
+            if (bottomLevel is null)
+            {
+                return res;
+            }
+            while (el is not null)
+            {
+                pres = el.Value.GetPres(); 
+                if (pres < bottomLevel - 255.0)
+                {
+                    break;
+                }
+                if (pres is null)
+                {
+                    break;
+                }
+                if (pres <= bottomLevel)
+                {
+                    thetaE = el.Value.GetThetaE();
+                    if (thetaE is null)
+                    {
+                        break;
+                    }
+                    if (maxThetaE is null)
+                    {
+                        maxThetaE = thetaE;
+                        maxUnstableLevel = pres;
+                    } 
+                    else
+                    {
+                        if(thetaE >= maxThetaE)
+                        {
+                            maxUnstableLevel = pres;
+                            maxThetaE = thetaE;
+                        }
+                    }
+                }
+                el = el.Next;
+            }
+            return maxUnstableLevel;
         }
 
         private double? GetTemperature(double level)
@@ -334,17 +505,21 @@ namespace AeroDiag
                         currentMixRat = tabElem.GetMixRatio();
                         if (currentMixRat is null)
                         {
-                            break;
+                            return result;
                         }
                         result = 0;
                     }
                     if (currentPres < bottomLevel)
                     {
+                        if (result is null)
+                        {
+                            result = 0;
+                        }
                         prevMixRat = currentMixRat;
                         currentMixRat = tabElem.GetMixRatio();
                         if (currentMixRat is null)
                         {
-                            break;
+                            return result;
                         }
                         result += (0.5 * (currentMixRat + prevMixRat) * (prevPres - currentPres)) / (9.97 * MeteoMath.GetGravity());
                     }
@@ -353,12 +528,227 @@ namespace AeroDiag
             return result;
         }
 
-        //TLCL = (((1/(1/(SDP - 56) + Math.log (ST/SDP)/800)) + 56) - 273.16);
-        //PLCL = (SP* Math.pow(((TLCL + 273.16) / ST), (7/2) ) ) / 1000;
+        private void SetGammaW()
+        {
+            double? bottomLevel = GetBottomLevel();
+            foreach (AeroTableElem elem in table)
+            {
+                double? temperature = elem.GetTmp();
+                double? dewpoint = elem.GetDewPoint();
+                double? pressure = elem.GetPres();
+                double? mixratio = elem.GetMixRatio();
+                double? hgt = elem.GetHgt();
 
-        //document.lcl.PLCLP.value = PLCL* 1000; //Pa
-        // SP - surface pressure kPa
-        // ST - surface temperature
+                if (bottomLevel is null)
+                {
+                    break;
+                }
+
+                if (pressure is null)
+                {
+                    break;
+                }
+                if (pressure < 100)
+                {
+                    break;
+                }
+                else
+                {
+                    if (bottomLevel < pressure)
+                    {
+                        continue;
+                    }
+                }
+
+                double? plcl;
+                double? cape;
+                double? cin;
+                double? lftx;
+                if (
+                    temperature is null
+                    || dewpoint is null
+                    || pressure is null
+                    || mixratio is null
+                    || hgt is null
+                )
+                {
+                    break;
+                }
+                GammaW((double)temperature, (double)dewpoint, (double)pressure, (double)mixratio, (double)hgt, out plcl, out cape, out cin, out lftx);
+                elem.SetGammaW(plcl, cape, cin, lftx);
+            }
+        }
+
+        private void GammaW(double temperature, double dewpoint, double pressure, double mixratio, double hgt, out double? plcl, out double? cape, out double? cin, out double? lftx)
+        {
+            plcl = null;
+            cape = null;
+            cin = null;
+            lftx = null;
+
+            double p = pressure;
+            double? nextP;
+
+            double? tempP;
+
+            plcl = MeteoMath.GetLiftedCondensationLevelPressure(temperature, dewpoint, pressure);
+            double tlcl = MeteoMath.GetLiftedCondensationLevelTemperature(temperature, dewpoint);
+            if (plcl is null)
+            {
+                return;
+            }
+            double gradient = 0.1 * (temperature - tlcl) / (pressure - (double)plcl);
+
+            if (p <= plcl)
+            {
+                gradient = 10 * MeteoMath.GammaW(temperature, pressure - 0.05, 100.0);
+            }
+
+            var elem = table.First;
+            if (elem is null)
+            {
+                return;
+            }
+
+            tempP = elem.Value.GetPres();
+            if (tempP is null)
+            {
+                return;
+            }
+            if (tempP < GetBottomLevel())
+            {
+                elem = elem.Next;
+                if (elem is null)
+                {
+                    return;
+                }
+                tempP = elem.Value.GetPres();
+                if (tempP is null)
+                {
+                    return;
+                }
+            }
+
+            while (tempP >= p)
+            {
+                elem = elem.Next;
+                if (elem is null)
+                {
+                    return;
+                }
+                if (!elem.Value.IsNotNullable())
+                {
+                    return;
+                }
+                tempP = elem.Value.GetPres();
+                if (tempP is null)
+                {
+                    return;
+                }
+            }
+            nextP = tempP;
+
+            double? prevP = p;
+            double? prevT = temperature;
+            double? prevM = mixratio;
+            double? prevH = hgt;
+            double t = temperature;
+            double? tEnv = null;
+            double? mEnv = null;
+
+            double? nextT = elem.Value.GetTmp();
+            double? nextM = elem.Value.GetMixRatio();
+            double? nextH = elem.Value.GetHgt();
+
+            if (nextT is null || nextM is null || nextH is null)
+            {
+                return;
+            }
+
+            cape = 0;
+            cin = 0;
+            double cinTmp = 0;
+
+            bool hasCape = false;
+            double tVirtualDiffOld = 0;
+            double tVirtualDiff = 0;
+
+            double capePart = 0;
+            double capePartOld = 0;
+
+            while (p >= 100.0)
+            {
+                t -= gradient;
+
+                double tVirtParcel;
+                if (p < plcl)
+                {
+                    tVirtParcel = MeteoMath.Virtual2(t + 273.16, t + 273.16, p);
+                }
+                else
+                {
+                    tVirtParcel = MeteoMath.Virtual2(t + 273.16, dewpoint + 273.16, p);
+                }
+
+                double tEnvInterp = MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevT, (double)nextT, p);
+                double mEnvInterp = MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevM, (double)nextM, p);
+                double tVirtEnv = MeteoMath.Virtual(tEnvInterp + 273.16, mEnvInterp / 1000);
+
+                tVirtualDiffOld = tVirtualDiff;
+                tVirtualDiff = tVirtParcel - tVirtEnv;
+
+                capePartOld = capePart;
+                capePart = tVirtualDiff / tVirtEnv;
+                double hInterp = MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevH, (double)nextH, p);
+                double hPrevInterp = MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevH, (double)nextH, p + 0.1);
+
+                if (capePart > 0)
+                {                   
+                    cape += MeteoMath.GetGravity() * 0.5 * (capePartOld + capePart) * (0.1*(hInterp - hPrevInterp));
+                    if (!hasCape)
+                    {
+                        hasCape = true;
+                        cin = cinTmp;
+                    }
+                } 
+                else if (capePart <= 0 || !hasCape)
+                {
+                    cinTmp += MeteoMath.GetGravity() * 0.5 * (capePartOld + capePart) * (0.1 * (hInterp - hPrevInterp));
+                }
+
+                if (lftx is null && p <= 500.0 && p >= 499.9)
+                {
+                    lftx = -1.0 * tVirtualDiff;
+                }
+
+                if (p <= nextP)
+                {
+                    elem = elem.Next;
+                    if (elem is null)
+                    {
+                        return;
+                    }
+                    prevT = nextT;
+                    prevM = nextM;
+                    prevP = nextP;
+                    nextT = elem.Value.GetTmp();
+                    nextM = elem.Value.GetMixRatio();
+                    nextP = elem.Value.GetPres();
+                    nextH = elem.Value.GetHgt();
+                    if (nextT is null || nextM is null || nextP is null || nextH is null)
+                    {
+                        return;
+                    }
+                }
+
+                if (p <= plcl)
+                {
+                    gradient = 10 * MeteoMath.GammaW(t, p - 0.05, 100.0);
+                }
+
+                p -= 0.1;
+            }
+        }
         #endregion
     }
 }
