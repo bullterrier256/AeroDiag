@@ -208,6 +208,16 @@ namespace AeroDiag
             return thetae;
         }
 
+        public double? GetSpeed()
+        {
+            return speed;
+        }
+
+        public double? GetDirection()
+        {
+            return direction;
+        }
+
         public void SetGammaW(double? plclVal, double? capeVal, double? cinVal, double? lftxVal)
         {
             plcl = plclVal;
@@ -727,31 +737,6 @@ namespace AeroDiag
                 elem.SetGammaW(plcl, cape, cin, lftx);
             }
         }
-        /*   helic=0
-   SRhelic=0
-   MinP=SfcPlev-HelicDep
-   pres=SfcPlev
-   uwndold=-999
-   vwndold=-999
-   While (pres >= MinP)
-      uwnd=interp(uwndarr,pres)*_ktm
-      vwnd=interp(vwndarr,pres)*_ktm
-      If (uwnd > -900 & uwndold > -900)
-          du=uwnd-uwndold
-          dv=vwnd-vwndold
-          ubar=0.5*(uwnd+uwndold)
-          vbar=0.5*(vwnd+vwndold)
-          uhelic=-dv*ubar                   
-          vhelic=du*vbar                   
-          SRuhelic=-dv*(ubar-StormU)
-          SRvhelic=du*(vbar-StormV)
-          SRhelic=SRhelic+SRuhelic+SRvhelic
-          helic=helic+uhelic+vhelic
-      Endif
-      uwndold=uwnd
-      vwndold=vwnd
-      pres=pres-delp
-   EndWhile*/
 
         public void GetML(double depth, out double? plcl, out double? cape, out double? cin, out double? lftx)
         {
@@ -838,7 +823,7 @@ namespace AeroDiag
                     nextM = elem.Value.GetMixRatio();
                     nextP = elem.Value.GetPres();
                     nextH = elem.Value.GetHgt();
-                    if (nextT is null || nextM is null || nextP is null || nextH is null || nextH is null || nextH is null)
+                    if (nextT is null || nextM is null || nextP is null || nextH is null)
                     {
                         return;
                     }

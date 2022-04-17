@@ -118,5 +118,15 @@ namespace AeroDiag
             double tdc = dewpointK - 273.16;
             return 100 * Math.Exp((18.678 - tdc / 234.5) * (tdc / (257.14 + tdc)) - (18.678 - tc / 234.5) * (tc / (257.14 + tc)));
         }
+
+        public static double GetU(double speed, double direction)
+        {
+            return -1.0 * Math.Abs(speed) * Math.Sin((Math.PI / 180) * direction);
+        }
+
+        public static double GetV(double speed, double direction)
+        {
+            return -1.0 * Math.Abs(speed) * Math.Cos((Math.PI / 180) * direction);
+        }
     }
 }
