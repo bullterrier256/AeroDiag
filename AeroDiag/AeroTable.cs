@@ -249,6 +249,23 @@ namespace AeroDiag
             double? mucin = null;
             double? mulftx = null;
 
+            double? mlplcl = null;
+            double? mlcape = null;
+            double? mlcin = null;
+            double? mllftx = null;
+
+            double? mplcl = null;
+            double? mcape = null;
+            double? mcin = null;
+            double? mlftx = null;
+
+            double? kndx = null;
+            double? tqndx = null;
+            double? ttndx = null;
+            double? epndx = null;
+
+            double? tndx = null;
+
             double? bottomLevel = GetBottomLevel();
             double? mostUnstableLevel = GetMostUnstableLevel();
 
@@ -280,6 +297,11 @@ namespace AeroDiag
                 }
             }
 
+            GetML(90.0, out mlplcl, out mlcape, out mlcin, out mllftx);
+            GetML(30.0, out mplcl, out mcape, out mcin, out mlftx);
+
+            GetInstabilityIndexes(out kndx, out tqndx, out ttndx, out epndx);
+
             result += "\r\n";
             result += "DIAGNOSTIC VALUES: \r\n";
 
@@ -292,24 +314,69 @@ namespace AeroDiag
 
             result += $"Precipitable water [mm]: {AeroTableElem.ValToStr(GetPrecipitableWater(), 2, false)}\r\n";
 
+            if (ttndx is not null)
+            {
+                result += $"Total totals index [K]: {AeroTableElem.ValToStr((double)ttndx, 1, false)}\r\n";
+            }
+
+            if (kndx is not null)
+            {
+                result += $"K index [K]: {AeroTableElem.ValToStr((double)kndx, 1, false)}\r\n";
+            }
+
+            if (tqndx is not null)
+            {
+                result += $"TQ index [K]: {AeroTableElem.ValToStr((double)tqndx, 1, false)}\r\n";
+            }
+
+            if (kndx is not null && mlftx is not null)
+            {
+                result += $"Thompson index [K]: {AeroTableElem.ValToStr((double)kndx - (double)mlftx, 1, false)}\r\n";
+            }
+
+            if (epndx is not null)
+            {
+                result += $"EP index [K]: {AeroTableElem.ValToStr((double)epndx, 1, false)}\r\n";
+            }
+
+            if (mplcl is not null)
+            {
+                result += $"Pressure of lifted condensation level [hPa]: {AeroTableElem.ValToStr(mplcl, 1, false)}\r\n";
+            }
+
+            if (mcape is not null)
+            {
+                result += $"Convective available potential energy [J/kg]: {AeroTableElem.ValToStr(mcape, 2, false)}\r\n";
+            }
+
+            if (mcin is not null)
+            {
+                result += $"Convective inhibition [J/kg]: {AeroTableElem.ValToStr(mcin, 2, false)}\r\n";
+            }
+
+            if (mlftx is not null)
+            {
+                result += $"Lifted index [C]: {AeroTableElem.ValToStr(mlftx, 2, false)}\r\n";
+            }
+
             if (plcl is not null)
             {
-                result += $"Pressure of lifted codensation level [hPa]: {AeroTableElem.ValToStr(plcl, 1, false)}\r\n";
+                result += $"Pressure of lifted condensation level (Surface-based) [hPa]: {AeroTableElem.ValToStr(plcl, 1, false)}\r\n";
             }
 
             if (cape is not null)
             {
-                result += $"Convective available potential energy [J/kg]: {AeroTableElem.ValToStr(cape, 2, false)}\r\n";
+                result += $"Surface-based Convective available potential energy [J/kg]: {AeroTableElem.ValToStr(cape, 2, false)}\r\n";
             }
 
             if (cin is not null)
             {
-                result += $"Convective inhibition [J/kg]: {AeroTableElem.ValToStr(cin, 2, false)}\r\n";
+                result += $"Surface-based Convective inhibition [J/kg]: {AeroTableElem.ValToStr(cin, 2, false)}\r\n";
             }
 
             if (lftx is not null)
             {
-                result += $"Lifted index [C]: {AeroTableElem.ValToStr(lftx, 2, false)}\r\n";
+                result += $"Surface-based Lifted index [C]: {AeroTableElem.ValToStr(lftx, 2, false)}\r\n";
             }
 
             if (mostUnstableLevel is not null)
@@ -319,7 +386,7 @@ namespace AeroDiag
 
             if (muplcl is not null)
             {
-                result += $"Pressure of lifted codensation level (Most Unstable) [hPa]: {AeroTableElem.ValToStr(muplcl, 1, false)}\r\n";
+                result += $"Pressure of lifted condensation level (Most Unstable) [hPa]: {AeroTableElem.ValToStr(muplcl, 1, false)}\r\n";
             }
 
             if (mucape is not null)
@@ -335,6 +402,26 @@ namespace AeroDiag
             if (mulftx is not null)
             {
                 result += $"Most Unstable Lifted index [C]: {AeroTableElem.ValToStr(mulftx, 2, false)}\r\n";
+            }
+
+            if (mlplcl is not null)
+            {
+                result += $"Pressure of lifted condensation level (Mixed layer) [hPa]: {AeroTableElem.ValToStr(mlplcl, 1, false)}\r\n";
+            }
+
+            if (mlcape is not null)
+            {
+                result += $"Mixed Layer Convective available potential energy [J/kg]: {AeroTableElem.ValToStr(mlcape, 2, false)}\r\n";
+            }
+
+            if (mlcin is not null)
+            {
+                result += $"Mixed layer Convective inhibition [J/kg]: {AeroTableElem.ValToStr(mlcin, 2, false)}\r\n";
+            }
+
+            if (mllftx is not null)
+            {
+                result += $"Mixed layer Lifted index [C]: {AeroTableElem.ValToStr(mllftx, 2, false)}\r\n";
             }
 
             return result;
@@ -391,6 +478,68 @@ namespace AeroDiag
                 res = GetHeight((double)bottomLevel);
             }
             return res;
+        }
+
+        private void GetInstabilityIndexes(out double? kndx, out double? tqndx, out double? ttndx, out double? epndx)
+        {
+            kndx = null;
+            tqndx = null;
+            ttndx = null;
+            epndx = null;
+
+            AeroTableElem? elem;
+
+            double? tmp850 = null;
+            double? td850 = null;
+            double? th850 = null;
+
+            elem = GetLevel(850.0);
+            if (elem is not null)
+            {
+                tmp850 = elem.GetTmp();
+                td850 = elem.GetDewPoint();
+                th850 = elem.GetThetaE();
+            }
+
+            double? tmp700 = null;
+            double? td700 = null;
+
+            elem = GetLevel(700.0);
+            if (elem is not null)
+            {
+                tmp700 = elem.GetTmp();
+                td700 = elem.GetDewPoint();
+            }
+
+            double? tmp500 = null;
+            double? th500 = null;
+
+            elem = GetLevel(500.0);
+            if (elem is not null)
+            {
+                tmp500 = elem.GetTmp();
+                th500 = elem.GetThetaE();
+            }
+
+            if (tmp850 is not null && td850 is not null && tmp700 is not null && td700 is not null && tmp500 is not null)
+            {
+                kndx = tmp850 - tmp500 + td850 - (tmp700 - td700);
+            }
+
+            if (tmp850 is not null && td850 is not null && tmp700 is not null)
+            {
+                tqndx = tmp850 + td850 - 1.7 * tmp700;
+            }
+
+            if (th500 is not null && th850 is not null)
+            {
+                epndx = th500 - th850;
+            }
+
+            if (tmp850 is not null && td850 is not null && tmp500 is not null)
+            {
+                ttndx = tmp850 + td850 - 2 * tmp500;
+            }
         }
 
         private double? GetBottomLevel()
@@ -577,6 +726,136 @@ namespace AeroDiag
                 GammaW((double)temperature, (double)dewpoint, (double)pressure, (double)mixratio, (double)hgt, out plcl, out cape, out cin, out lftx);
                 elem.SetGammaW(plcl, cape, cin, lftx);
             }
+        }
+        /*   helic=0
+   SRhelic=0
+   MinP=SfcPlev-HelicDep
+   pres=SfcPlev
+   uwndold=-999
+   vwndold=-999
+   While (pres >= MinP)
+      uwnd=interp(uwndarr,pres)*_ktm
+      vwnd=interp(vwndarr,pres)*_ktm
+      If (uwnd > -900 & uwndold > -900)
+          du=uwnd-uwndold
+          dv=vwnd-vwndold
+          ubar=0.5*(uwnd+uwndold)
+          vbar=0.5*(vwnd+vwndold)
+          uhelic=-dv*ubar                   
+          vhelic=du*vbar                   
+          SRuhelic=-dv*(ubar-StormU)
+          SRvhelic=du*(vbar-StormV)
+          SRhelic=SRhelic+SRuhelic+SRvhelic
+          helic=helic+uhelic+vhelic
+      Endif
+      uwndold=uwnd
+      vwndold=vwnd
+      pres=pres-delp
+   EndWhile*/
+
+        public void GetML(double depth, out double? plcl, out double? cape, out double? cin, out double? lftx)
+        {
+            plcl = null;
+            cape = null;
+            cin = null;
+            lftx = null;
+
+            var elem = table.First;
+            if (elem is null)
+            {
+                return;
+            }
+
+            double? tempP = elem.Value.GetPres();
+            if (tempP is null)
+            {
+                return;
+            }
+            if (tempP > GetBottomLevel())
+            {
+                elem = elem.Next;
+                if (elem is null)
+                {
+                    return;
+                }
+                tempP = elem.Value.GetPres();
+                if (tempP is null)
+                {
+                    return;
+                }
+            }
+
+            double bottomPressure = (double)tempP;
+            double p = bottomPressure;
+
+            double? prevP = p;
+            double? nextP = p;
+            double? prevT = elem.Value.GetTmp();
+            double? prevH = elem.Value.GetHgt();
+            double? prevM = elem.Value.GetMixRatio();
+            double? nextT = prevT;
+            double? nextH = prevH;
+            double? nextM = prevM;
+
+            if (prevT is null || prevM is null || nextT is null || nextH is null || nextM is null || nextH is null)
+            {
+                return;
+            }
+
+            double mlmr = 0;
+            double mlt = 0;
+            double? hgt = null;
+            double center = bottomPressure - depth * 0.5;
+
+            int i = 0;
+            while (p >= (bottomPressure - depth))
+            {
+                i += 1;
+                mlt += (prevP != nextP) ? MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevT, (double)nextT, p) : (double)nextT;
+                mlmr += (prevP != nextP) ? MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevM, (double)nextM, p) : (double)nextM;
+
+                if (hgt is null && p <= center)
+                {
+                    hgt = (prevP != nextP) ? MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevH, (double)nextH, p) : (double)nextT;
+                    if (hgt is null)
+                    {
+                        return;
+                    }
+                }
+
+                if (p <= nextP)
+                {
+                    elem = elem.Next;
+                    if (elem is null)
+                    {
+                        return;
+                    }
+                    prevT = nextT;
+                    prevM = nextM;
+                    prevP = nextP;
+                    prevH = nextH;
+                    nextT = elem.Value.GetTmp();
+                    nextM = elem.Value.GetMixRatio();
+                    nextP = elem.Value.GetPres();
+                    nextH = elem.Value.GetHgt();
+                    if (nextT is null || nextM is null || nextP is null || nextH is null || nextH is null || nextH is null)
+                    {
+                        return;
+                    }
+                }
+                p -= 0.1;
+            }
+
+            if (hgt is null)
+            {
+                return;
+            }
+
+            mlt = mlt / i;
+            mlmr = mlmr / i;
+            double humidity = MeteoMath.RelativeHumidity(mlt, center, mlmr);
+            double dewpoint = MeteoMath.DewPoint(mlt, humidity);
+            GammaW(mlt, dewpoint, center, mlmr, (double)hgt, out plcl, out cape, out cin, out lftx);
         }
 
         private void GammaW(double temperature, double dewpoint, double pressure, double mixratio, double hgt, out double? plcl, out double? cape, out double? cin, out double? lftx)

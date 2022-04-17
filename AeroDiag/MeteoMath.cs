@@ -55,6 +55,24 @@ namespace AeroDiag
             return 6.112 * Math.Exp(17.67 * tempC / (tempC + 243.5));
         }
 
+        // returns relative humidity
+        public static double RelativeHumidity(double tempC, double pressure, double mixratio)
+        {
+            double vap = SatVap2(tempC);
+            double mix = MixRatio(vap, pressure);
+            return 100 * ((mixratio / 1000) / mix);
+        }
+
+        // returns dewpoint temperature
+        public static double DewPoint(double tempC, double humidity)
+        {
+            //double alpha = 6.112;
+            double beta = 17.67;
+            double lambda = 243.5;
+            double part = Math.Log(humidity / 100) + (beta * tempC) / (lambda + tempC);
+            return (lambda * part) / (beta - part);
+        }
+
         // Function to return virtual temperature in kelvin given temperature in
         // kelvin and dewpoint in kelvin and pressure in mb
         public static double Virtual2(double tempK, double dewpointK, double pressure)
@@ -93,6 +111,7 @@ namespace AeroDiag
             return startVal - coeff * (startVal - endVal);
         }
 
+        // Не валидный
         public static double GetHumidity(double tempK, double dewpointK)
         {
             double tc = tempK - 273.16;

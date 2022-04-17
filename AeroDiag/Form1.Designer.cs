@@ -49,18 +49,21 @@
             this.groupBox1.Controls.Add(this.dateComboBox);
             this.groupBox1.Controls.Add(this.pointTextBox);
             this.groupBox1.Controls.Add(this.label1);
-            this.groupBox1.Location = new System.Drawing.Point(12, 12);
+            this.groupBox1.Location = new System.Drawing.Point(10, 9);
+            this.groupBox1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(776, 63);
+            this.groupBox1.Padding = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.groupBox1.Size = new System.Drawing.Size(679, 47);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Выбор Пункта и даты";
             // 
             // loadAeroDataButton
             // 
-            this.loadAeroDataButton.Location = new System.Drawing.Point(557, 21);
+            this.loadAeroDataButton.Location = new System.Drawing.Point(487, 16);
+            this.loadAeroDataButton.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.loadAeroDataButton.Name = "loadAeroDataButton";
-            this.loadAeroDataButton.Size = new System.Drawing.Size(94, 29);
+            this.loadAeroDataButton.Size = new System.Drawing.Size(82, 22);
             this.loadAeroDataButton.TabIndex = 6;
             this.loadAeroDataButton.Text = "Загрузить";
             this.loadAeroDataButton.UseVisualStyleBackColor = true;
@@ -75,49 +78,52 @@
             "06",
             "12",
             "18"});
-            this.timeComboBox.Location = new System.Drawing.Point(488, 22);
+            this.timeComboBox.Location = new System.Drawing.Point(427, 16);
+            this.timeComboBox.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.timeComboBox.Name = "timeComboBox";
-            this.timeComboBox.Size = new System.Drawing.Size(63, 28);
+            this.timeComboBox.Size = new System.Drawing.Size(56, 23);
             this.timeComboBox.TabIndex = 5;
             // 
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(428, 26);
+            this.label3.Location = new System.Drawing.Point(374, 20);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(54, 20);
+            this.label3.Size = new System.Drawing.Size(42, 15);
             this.label3.TabIndex = 4;
             this.label3.Text = "Время";
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(192, 28);
+            this.label2.Location = new System.Drawing.Point(168, 21);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(41, 20);
+            this.label2.Size = new System.Drawing.Size(32, 15);
             this.label2.TabIndex = 3;
             this.label2.Text = "Дата";
             // 
             // dateComboBox
             // 
-            this.dateComboBox.Location = new System.Drawing.Point(239, 23);
+            this.dateComboBox.Location = new System.Drawing.Point(209, 17);
+            this.dateComboBox.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.dateComboBox.Name = "dateComboBox";
-            this.dateComboBox.Size = new System.Drawing.Size(183, 27);
+            this.dateComboBox.Size = new System.Drawing.Size(161, 23);
             this.dateComboBox.TabIndex = 2;
             // 
             // pointTextBox
             // 
-            this.pointTextBox.Location = new System.Drawing.Point(61, 23);
+            this.pointTextBox.Location = new System.Drawing.Point(53, 17);
+            this.pointTextBox.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.pointTextBox.Name = "pointTextBox";
-            this.pointTextBox.Size = new System.Drawing.Size(125, 27);
+            this.pointTextBox.Size = new System.Drawing.Size(110, 23);
             this.pointTextBox.TabIndex = 1;
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(6, 26);
+            this.label1.Location = new System.Drawing.Point(5, 20);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(49, 20);
+            this.label1.Size = new System.Drawing.Size(40, 15);
             this.label1.TabIndex = 0;
             this.label1.Text = "Пункт";
             // 
@@ -127,22 +133,24 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.aeroDataText.Font = new System.Drawing.Font("Courier New", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.aeroDataText.Location = new System.Drawing.Point(18, 81);
+            this.aeroDataText.Location = new System.Drawing.Point(16, 61);
+            this.aeroDataText.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.aeroDataText.Multiline = true;
             this.aeroDataText.Name = "aeroDataText";
             this.aeroDataText.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.aeroDataText.Size = new System.Drawing.Size(770, 357);
+            this.aeroDataText.Size = new System.Drawing.Size(674, 269);
             this.aeroDataText.TabIndex = 1;
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(700, 338);
             this.Controls.Add(this.aeroDataText);
             this.Controls.Add(this.groupBox1);
+            this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.Name = "Form1";
-            this.Text = "Form1";
+            this.Text = "Загрузка данных аэрологического зондирования";
             this.Load += new System.EventHandler(this.Form1_Load);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
