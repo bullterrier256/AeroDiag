@@ -151,7 +151,8 @@ namespace AeroDiag
         public static string GetHeader()
         {
             string header;
-            header =  "==================================================================================================\r\n";
+            header = "Data from https://weather.uwyo.edu/upperair/sounding.html\r\n";
+            header += "==================================================================================================\r\n";
             header += "   PRES    HGT   TEMP   DWPT   RELH   MIXR   DRCT   SKNT    SMS   THTE   PLCL   CAPE    CIN   LFTX\r\n";
             header += "    HPA      M      C      C      %   G/KG    DEG   KNOT    M/S      K    HPA   J/KG   J/KG      C\r\n";
             header += "==================================================================================================\r\n";
@@ -276,6 +277,12 @@ namespace AeroDiag
 
             double? tndx = null;
 
+            double? uStorm = null;
+            double? vStorm = null;
+
+            double? srh90 = null;
+            double? srh255 = null;
+
             double? bottomLevel = GetBottomLevel();
             double? mostUnstableLevel = GetMostUnstableLevel();
 
@@ -312,6 +319,14 @@ namespace AeroDiag
 
             GetInstabilityIndexes(out kndx, out tqndx, out ttndx, out epndx);
 
+            GetStormMotion(out uStorm, out vStorm);
+
+            if (uStorm is not null && vStorm is not null)
+            {
+                GetStormRelativeHelicity(90.0, (double)uStorm, (double)vStorm, out srh90);
+                GetStormRelativeHelicity(255.0, (double)uStorm, (double)vStorm, out srh255);
+            }
+
             result += "\r\n";
             result += "DIAGNOSTIC VALUES: \r\n";
 
@@ -347,6 +362,24 @@ namespace AeroDiag
             if (epndx is not null)
             {
                 result += $"EP index [K]: {AeroTableElem.ValToStr((double)epndx, 1, false)}\r\n";
+            }
+
+            if (uStorm is not null && vStorm is not null)
+            {
+                double stormSpeed = MeteoMath.KnotsToMetersPerSecond(MeteoMath.GetWindSpeed((double)uStorm, (double)vStorm));
+                double stormDirection = MeteoMath.GetWindDirection((double)uStorm, (double)vStorm);
+                result += $"Storm Motion Speed [m/s]: {AeroTableElem.ValToStr(stormSpeed, 1, false)}\r\n";
+                result += $"Storm Motion Direction [deg]: {AeroTableElem.ValToStr(stormDirection, 0, false)}\r\n";
+            }
+
+            if (srh90 is not null)
+            {
+                result += $"0-90 hPa above ground Storm relative helicity [J/kg]: {AeroTableElem.ValToStr(srh90, 2, false)}\r\n";
+            }
+
+            if (srh255 is not null)
+            {
+                result += $"0-255 hPa above ground Storm relative helicity [J/kg]: {AeroTableElem.ValToStr(srh255, 2, false)}\r\n";
             }
 
             if (mplcl is not null)
@@ -736,6 +769,216 @@ namespace AeroDiag
                 GammaW((double)temperature, (double)dewpoint, (double)pressure, (double)mixratio, (double)hgt, out plcl, out cape, out cin, out lftx);
                 elem.SetGammaW(plcl, cape, cin, lftx);
             }
+        }
+
+        private void GetStormMotion(out double? u, out double? v)
+        {
+            u = null;
+            v = null;
+
+            double pBottom = 850.0;
+            double pTop = 300.0;
+
+            var elem = table.First;
+            if (elem is null)
+            {
+                return;
+            }
+
+            double? tempP = elem.Value.GetPres();
+            if (tempP is null)
+            {
+                return;
+            }
+            if (tempP > GetBottomLevel())
+            {
+                elem = elem.Next;
+                if (elem is null)
+                {
+                    return;
+                }
+                tempP = elem.Value.GetPres();
+                if (tempP is null)
+                {
+                    return;
+                }
+            }
+
+            double bottomPressure = (double)tempP;
+            double p = bottomPressure;
+
+            double? prevP = p;
+            double? nextP = p;
+            double? prevS = elem.Value.GetSpeed();
+            double? prevD = elem.Value.GetDirection();
+            double? nextS = prevS;
+            double? nextD = prevD;
+
+            if (prevS is null || prevD is null || nextS is null || nextD is null)
+            {
+                return;
+            }
+
+            double avgU = 0;
+            double avgV = 0;
+
+            int i = 0;
+            while (p >= pTop)
+            {
+                if (p <= pBottom)
+                {
+                    i += 1;
+                    double speed = (prevP != nextP) ? MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevS, (double)nextS, p) : (double)nextS;
+                    double direction = (prevP != nextP) ? MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevD, (double)nextD, p) : (double)nextD;
+
+                    avgU += MeteoMath.GetU(speed, direction);
+                    avgV += MeteoMath.GetV(speed, direction);
+                }
+
+                if (p <= nextP)
+                {
+                    elem = elem.Next;
+                    if (elem is null)
+                    {
+                        return;
+                    }
+                    prevS = nextS;
+                    prevD = nextD;
+                    prevP = nextP;
+                    nextS = elem.Value.GetSpeed();
+                    nextD = elem.Value.GetDirection();
+                    nextP = elem.Value.GetPres();
+                    if (nextD is null || nextS is null || nextP is null)
+                    {
+                        return;
+                    }
+                }
+
+                p -= 0.1;
+            }
+
+            avgU = avgU / i;
+            avgV = avgV / i;
+
+            double speedMean = MeteoMath.GetWindSpeed(avgU, avgV);
+            double directionMean = MeteoMath.GetWindDirection(avgU, avgV);
+
+            double reduct = 0.20;
+            double rotate = 20.0;
+
+            if (speedMean < 15.0)
+            {
+                reduct = 0.25;
+                rotate = 30.0;
+            }
+
+            double uReduce = (1 - reduct) * avgU;
+            double vReduce = (1 - reduct) * avgV;
+
+            double stormSpeed = MeteoMath.GetWindSpeed(uReduce, vReduce);
+            double stormDirection = MeteoMath.GetWindDirection(uReduce, vReduce) + rotate;
+
+            stormDirection = (stormDirection > 360.0) ? 360.0 - stormDirection : stormDirection;
+
+            u = MeteoMath.GetU(stormSpeed, stormDirection);
+            v = MeteoMath.GetV(stormSpeed, stormDirection);
+        }
+
+        private void GetStormRelativeHelicity(double depth, double stormU, double stormV, out double? helicity)
+        {
+            helicity = null;
+
+            var elem = table.First;
+            if (elem is null)
+            {
+                return;
+            }
+
+            double? tempP = elem.Value.GetPres();
+            if (tempP is null)
+            {
+                return;
+            }
+            if (tempP > GetBottomLevel())
+            {
+                elem = elem.Next;
+                if (elem is null)
+                {
+                    return;
+                }
+                tempP = elem.Value.GetPres();
+                if (tempP is null)
+                {
+                    return;
+                }
+            }
+
+            double bottomPressure = (double)tempP;
+            double p = bottomPressure;
+
+            double? prevP = p;
+            double? nextP = p;
+            double? prevS = elem.Value.GetSpeed();
+            double? prevD = elem.Value.GetDirection();
+            double? nextS = prevS;
+            double? nextD = prevD;
+
+            if (prevS is null || prevD is null || nextS is null || nextD is null)
+            {
+                return;
+            }
+
+            double srh = 0;
+            double? oldU = null;
+            double? oldV = null;
+
+            double stormUms = MeteoMath.KnotsToMetersPerSecond(stormU);
+            double stormVms = MeteoMath.KnotsToMetersPerSecond(stormV);
+
+            while (p >= (bottomPressure - depth))
+            {
+                double speed = (prevP != nextP) ? MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevS, (double)nextS, p) : (double)nextS;
+                double direction = (prevP != nextP) ? MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevD, (double)nextD, p) : (double)nextD;
+
+                double u = MeteoMath.GetU(MeteoMath.KnotsToMetersPerSecond(speed), direction);
+                double v = MeteoMath.GetV(MeteoMath.KnotsToMetersPerSecond(speed), direction);
+
+                if (oldU is not null && oldV is not null)
+                {
+                    double du = u - (double)oldU;
+                    double dv = v - (double)oldV;
+                    double ubar = 0.5 * (u + (double)oldU);
+                    double vbar = 0.5 * (v + (double)oldV);
+                    double uSRH = -1.0 * dv * (ubar - stormUms);
+                    double vSRH = du * (vbar - stormVms);
+                    srh = srh + uSRH + vSRH;
+                }
+
+                oldU = u;
+                oldV = v;
+
+                if (p <= nextP)
+                {
+                    elem = elem.Next;
+                    if (elem is null)
+                    {
+                        return;
+                    }
+                    prevS = nextS;
+                    prevD = nextD;
+                    prevP = nextP;
+                    nextS = elem.Value.GetSpeed();
+                    nextD = elem.Value.GetDirection();
+                    nextP = elem.Value.GetPres();
+                    if (nextD is null || nextS is null || nextP is null)
+                    {
+                        return;
+                    }
+                }
+                p -= 0.1;
+            }
+
+            helicity = srh;
         }
 
         public void GetML(double depth, out double? plcl, out double? cape, out double? cin, out double? lftx)

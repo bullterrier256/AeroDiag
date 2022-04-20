@@ -121,12 +121,31 @@ namespace AeroDiag
 
         public static double GetU(double speed, double direction)
         {
-            return -1.0 * Math.Abs(speed) * Math.Sin((Math.PI / 180) * direction);
+            double dtr = Math.PI / 180;
+            double spd = (speed <= 0) ? 0.01 : speed;
+            return spd * Math.Cos(dtr * (270 - direction));
+            //return -1.0 * Math.Abs(speed) * Math.Sin((Math.PI / 180) * direction);
         }
 
         public static double GetV(double speed, double direction)
         {
-            return -1.0 * Math.Abs(speed) * Math.Cos((Math.PI / 180) * direction);
+            double dtr = Math.PI / 180;
+            double spd = (speed <= 0) ? 0.01 : speed;
+            return spd * Math.Sin(dtr * (270 - direction));
+            //return -1.0 * Math.Abs(speed) * Math.Cos((Math.PI / 180) * direction);
+        }
+
+        public static double GetWindSpeed(double u, double v)
+        {
+            return Math.Sqrt(u * u + v * v);
+        }
+
+        public static double GetWindDirection(double u, double v)
+        {
+            double dtr = Math.PI / 180;
+            double rdt = 1 / dtr;
+            double direction = 270 - rdt * Math.Atan2(v, u);
+            return direction;
         }
     }
 }
