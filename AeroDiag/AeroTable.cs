@@ -125,7 +125,7 @@ namespace AeroDiag
                     result = " " + result;
                 }
             }
-            return result;
+            return result.Replace(",", ".") ;
         }
 
         public string ToStr()
