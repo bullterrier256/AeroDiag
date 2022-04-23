@@ -264,7 +264,6 @@ namespace AeroDiag
             double dtr = Math.PI / 180;
             double spd = (speed <= 0) ? 0.01 : speed;
             return spd * Math.Sin(dtr * (geoDegree - direction));
-            //return -1.0 * Math.Abs(speed) * Math.Cos((Math.PI / 180) * direction);
         }
 
         /// <summary>
@@ -279,7 +278,7 @@ namespace AeroDiag
         }
 
         /// <summary>
-        /// Скорость ветра
+        /// Направление ветра
         /// </summary>
         /// <param name="u">u-компонента вектора ветра</param>
         /// <param name="v">v-компонента вектора ветра</param>
