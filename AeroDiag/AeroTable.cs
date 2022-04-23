@@ -14,6 +14,11 @@ namespace AeroDiag
     internal class AeroTable
     {
         /// <summary>
+        /// Шаг интегрирования для вертикальных интегралов
+        /// </summary>
+        private const double step = 0.10;
+
+        /// <summary>
         /// Двунаправленный список со слоями данных по давлению
         /// </summary>
         private LinkedList<AeroTableElem> table;
@@ -520,6 +525,7 @@ namespace AeroDiag
             double? currentPres = null;
             double? currentMixRat = null;
             if (bottomLevel is not null) {
+                // Здесь шаг интегрирования не требуется, интегрируем методом трапеций между слоями
                 while (elem != null)
                 {
                     elem = elem.Next;
@@ -622,6 +628,7 @@ namespace AeroDiag
             u = null;
             v = null;
 
+            // Верхний и нижний пределы
             double pBottom = 850.0;
             double pTop = 300.0;
 
@@ -700,7 +707,7 @@ namespace AeroDiag
                     }
                 }
 
-                p -= 0.1;
+                p -= step;
             }
 
             avgU = avgU / i;
@@ -709,6 +716,7 @@ namespace AeroDiag
             double speedMean = MeteoMath.GetWindSpeed(avgU, avgV);
             double directionMean = MeteoMath.GetWindDirection(avgU, avgV);
 
+            // получаем отклонение ведущего потока от среднего ветра
             double reduct = 0.20;
             double rotate = 20.0;
 
@@ -726,6 +734,7 @@ namespace AeroDiag
 
             stormDirection = (stormDirection > 360.0) ? 360.0 - stormDirection : stormDirection;
 
+            // результат
             u = MeteoMath.GetU(stormSpeed, stormDirection);
             v = MeteoMath.GetV(stormSpeed, stormDirection);
         }
@@ -828,7 +837,7 @@ namespace AeroDiag
                         return;
                     }
                 }
-                p -= 0.1;
+                p -= step;
             }
 
             helicity = srh;
@@ -932,7 +941,7 @@ namespace AeroDiag
                         return;
                     }
                 }
-                p -= 0.1;
+                p -= step;
             }
 
             if (hgt is null)
@@ -948,7 +957,7 @@ namespace AeroDiag
         }
 
         /// <summary>
-        /// Расчет параметров плавучести (вертикалдьное интегрирование разности температуры окружающего воздуха и поднявшейся частицы)
+        /// Расчет параметров плавучести (вертикальное интегрирование разности температуры окружающего воздуха и поднявшейся частицы)
         /// </summary>
         /// <param name="temperature">Температура</param>
         /// <param name="dewpoint">Температура точки росы</param>
@@ -977,11 +986,14 @@ namespace AeroDiag
             {
                 return;
             }
-            double gradient = 0.1 * (temperature - tlcl) / (pressure - (double)plcl);
 
+            // Сухоадиабатический градиент
+            double gradient = step * (temperature - tlcl) / (pressure - (double)plcl);
+
+            // Если влажность 100%, сразу же используем влажноадиабатический градиент
             if (p <= plcl)
             {
-                gradient = 10 * MeteoMath.GammaW(temperature, pressure - 0.05, 100.0);
+                gradient = 10 * MeteoMath.GammaW(temperature, pressure - (0.5 * step), 100.0);
             }
 
             var elem = table.First;
@@ -1033,8 +1045,6 @@ namespace AeroDiag
             double? prevM = mixratio;
             double? prevH = hgt;
             double t = temperature;
-            double? tEnv = null;
-            double? mEnv = null;
 
             double? nextT = elem.Value.GetTmp();
             double? nextM = elem.Value.GetMixRatio();
@@ -1058,21 +1068,22 @@ namespace AeroDiag
 
             while (p >= 100.0)
             {
+                // С высотой температура частицы понижается
                 t -= gradient;
 
                 double tVirtParcel;
                 if (p < plcl)
                 {
-                    tVirtParcel = MeteoMath.Virtual2(t + 273.16, t + 273.16, p);
+                    tVirtParcel = MeteoMath.Virtual2(t + MeteoMath.kelvinKoefficient, t + MeteoMath.kelvinKoefficient, p);
                 }
                 else
                 {
-                    tVirtParcel = MeteoMath.Virtual2(t + 273.16, dewpoint + 273.16, p);
+                    tVirtParcel = MeteoMath.Virtual2(t + MeteoMath.kelvinKoefficient, dewpoint + MeteoMath.kelvinKoefficient, p);
                 }
 
                 double tEnvInterp = MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevT, (double)nextT, p);
                 double mEnvInterp = MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevM, (double)nextM, p);
-                double tVirtEnv = MeteoMath.Virtual(tEnvInterp + 273.16, mEnvInterp / 1000);
+                double tVirtEnv = MeteoMath.Virtual(tEnvInterp + MeteoMath.kelvinKoefficient, mEnvInterp / 1000);
 
                 tVirtualDiffOld = tVirtualDiff;
                 tVirtualDiff = tVirtParcel - tVirtEnv;
@@ -1080,11 +1091,12 @@ namespace AeroDiag
                 capePartOld = capePart;
                 capePart = tVirtualDiff / tVirtEnv;
                 double hInterp = MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevH, (double)nextH, p);
-                double hPrevInterp = MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevH, (double)nextH, p + 0.1);
+                double hPrevInterp = MeteoMath.InterpolationZ((double)prevP, (double)nextP, (double)prevH, (double)nextH, p + step);
 
+                // CIN считаем только до уровня свободной конвекции
                 if (capePart > 0)
                 {                   
-                    cape += MeteoMath.gravity * 0.5 * (capePartOld + capePart) * (0.1*(hInterp - hPrevInterp));
+                    cape += MeteoMath.gravity * 0.5 * (capePartOld + capePart) * (step * (hInterp - hPrevInterp));
                     if (!hasCape)
                     {
                         hasCape = true;
@@ -1093,10 +1105,11 @@ namespace AeroDiag
                 } 
                 else if (capePart <= 0 || !hasCape)
                 {
-                    cinTmp += MeteoMath.gravity * 0.5 * (capePartOld + capePart) * (0.1 * (hInterp - hPrevInterp));
+                    cinTmp += MeteoMath.gravity * 0.5 * (capePartOld + capePart) * (step * (hInterp - hPrevInterp));
                 }
 
-                if (lftx is null && p <= 500.0 && p >= 499.9)
+                // Выводим значение индекса плавучести
+                if (lftx is null && p <= 500.0 && p >= (500.0 - step))
                 {
                     lftx = -1.0 * tVirtualDiff;
                 }
@@ -1121,12 +1134,13 @@ namespace AeroDiag
                     }
                 }
 
+                // До уровня конденсации используем постоянный сухоадиабатический градиент, выше - переменный влажноадиабатический
                 if (p <= plcl)
                 {
-                    gradient = 10 * MeteoMath.GammaW(t, p - 0.05, 100.0);
+                    gradient = 10 * MeteoMath.GammaW(t, p - (0.5 * step), 100.0);
                 }
 
-                p -= 0.1;
+                p -= step;
             }
         }
         #endregion
