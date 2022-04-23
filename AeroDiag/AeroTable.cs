@@ -8,231 +8,20 @@ using System.Collections.Generic;
 
 namespace AeroDiag
 {
-    internal class AeroTableElem
-    {
-        private double? pressure;
-        private double? height;
-        private double? temperature;
-        private double? mixratio;
-        private double? direction;
-        private double? speed;
-        private double? speedms;
-        // доп. параметры
-        private double? humidity;
-        private double? dewpoint;
-        private double? thetae;
-        // cape etc
-        private double? plcl;
-        private double? cape;
-        private double? cin;
-        private double? lftx;
-
-        public AeroTableElem(string levelStr)
-        {
-            int pos = 0;
-            while (pos < levelStr.Length)
-            {
-                if (pos + 6 > levelStr.Length)
-                {
-                    break;
-                }
-                bool ok = false;
-                double val;
-                ok = Double.TryParse((levelStr.Substring(pos, 7)).Replace(".", ","), out val);
-                switch (pos)
-                {
-                    case 0:
-                        pressure = ok ? val: null;
-                        break;
-                    case 7:
-                        height = ok ? val : null;
-                        break;
-                    case 14:
-                        temperature = ok ? val : null;
-                        break;
-                    case 21:
-                        dewpoint = ok ? val : null;
-                        break;
-                    case 28:
-                        humidity = ok ? val : null;
-                        break;
-                    case 35:
-                        mixratio = ok ? val : null;
-                        break;
-                    case 42:
-                        direction = ok ? val : null;
-                        break;
-                    case 49:
-                        speed = ok ? val : null;
-                        break;
-                    case 63:
-                        thetae = ok ? val : null;
-                        break;
-                    default:
-                        break;
-                }
-                if (speed is not null)
-                {
-                    speedms = MeteoMath.KnotsToMetersPerSecond((double)speed);
-                }
-                pos += 7;
-            }
-        }
-        public bool IsNotNullable()
-        {
-            bool ok = (
-                pressure != null &&
-                height != null &&
-                temperature != null &&
-                dewpoint != null &&
-                humidity != null &&
-                mixratio != null &&
-                direction != null &&
-                speed != null &&
-                thetae != null
-            );
-            return ok;
-        }
-        public static string ValToStr(double? val, int countAfterPoint, bool needAlign = true)
-        {
-            string result;
-            if (val is null)
-            {
-                result = "       ";
-            } 
-            else
-            {
-                switch (countAfterPoint)
-                {
-                    case 0:
-                        result = ((double)val).ToString("f0");
-                        break;
-                    case 1:
-                        result = ((double)val).ToString("f1");
-                        break;
-                    case 2:
-                        result = ((double)val).ToString("f2");
-                        break;
-                    default:
-                        result = "       ";
-                        break;
-                }
-            }
-            if (needAlign)
-            {
-                while (result.Length < 7)
-                {
-                    result = " " + result;
-                }
-            }
-            return result.Replace(",", ".") ;
-        }
-
-        public string ToStr()
-        {
-            string result = String.Empty;
-            result += ValToStr(pressure, 1);
-            result += ValToStr(height, 0);
-            result += ValToStr(temperature, 1);
-            result += ValToStr(dewpoint, 1);
-            result += ValToStr(humidity, 0);
-            result += ValToStr(mixratio, 2);
-            result += ValToStr(direction, 0);
-            result += ValToStr(speed, 0);
-            result += ValToStr(speedms, 1);
-            result += ValToStr(thetae, 1);
-            result += ValToStr(plcl, 1);
-            result += ValToStr(cape, 0);
-            result += ValToStr(cin, 0);
-            result += ValToStr(lftx, 1);
-            return result;
-        }
-
-        public static string GetHeader()
-        {
-            string header;
-            header = "Data from https://weather.uwyo.edu/upperair/sounding.html\r\n";
-            header += "==================================================================================================\r\n";
-            header += "   PRES    HGT   TEMP   DWPT   RELH   MIXR   DRCT   SKNT    SMS   THTE   PLCL   CAPE    CIN   LFTX\r\n";
-            header += "    HPA      M      C      C      %   G/KG    DEG   KNOT    M/S      K    HPA   J/KG   J/KG      C\r\n";
-            header += "==================================================================================================\r\n";
-            return header;
-        }
-
-        #region GetSet
-        public double? GetPres()
-        {
-            return pressure;
-        }
-
-        public double? GetHgt()
-        {
-            return height;
-        }
-
-        public double? GetTmp()
-        {
-            return temperature;
-        }
-
-        public double? GetDewPoint()
-        {
-            return dewpoint;
-        }
-
-        public double? GetMixRatio()
-        {
-            return mixratio;
-        }
-
-        public double? GetLiftedCondensationLevel()
-        {
-            return plcl;
-        }
-
-        public double? GetCape()
-        {
-            return cape;
-        }
-        public double? GetCin()
-        {
-            return cin;
-        }
-
-        public double? GetLftx()
-        {
-            return lftx;
-        }
-
-        public double? GetThetaE()
-        {
-            return thetae;
-        }
-
-        public double? GetSpeed()
-        {
-            return speed;
-        }
-
-        public double? GetDirection()
-        {
-            return direction;
-        }
-
-        public void SetGammaW(double? plclVal, double? capeVal, double? cinVal, double? lftxVal)
-        {
-            plcl = plclVal;
-            cape = capeVal;
-            cin = cinVal;
-            lftx = lftxVal;
-        }
-        #endregion
-    }
-
+    /// <summary>
+    /// Данные аэрологического зондирования
+    /// </summary>
     internal class AeroTable
     {
+        /// <summary>
+        /// Двунаправленный список со слоями данных по давлению
+        /// </summary>
         private LinkedList<AeroTableElem> table;
 
+        /// <summary>
+        /// Конструктор, парсит таблицу
+        /// </summary>
+        /// <param name="inputStr">Нераспарсенная таблица</param>
         public AeroTable(string inputStr)
         {
             table = new LinkedList<AeroTableElem>();
@@ -243,9 +32,15 @@ namespace AeroDiag
                 AeroTableElem elem = new AeroTableElem(items[i]);
                 table.AddLast(elem);
             }
+
+            // Сразу после парсинга выполняем расчет поднимающейся частицы
             SetGammaW();
         }
 
+        /// <summary>
+        /// Данные зондирования в строку
+        /// </summary>
+        /// <returns>Таблица в текстовом формате лоя вывода</returns>
         public string ToStr()
         {
             string result = AeroTableElem.GetHeader();
@@ -470,6 +265,11 @@ namespace AeroDiag
             return result;
         }
 
+        /// <summary>
+        /// Наличие уровня (НЕ ВАЛИДЕН)
+        /// </summary>
+        /// <param name="level">уровень</param>
+        /// <returns>Есть такой уровень или нет</returns>
         private bool HasLevel (double level)
         {
             bool ok = false;
@@ -490,6 +290,11 @@ namespace AeroDiag
             return ok;
         }
 
+        /// <summary>
+        /// Получить данные уровня по давлению
+        /// </summary>
+        /// <param name="level">Уровень</param>
+        /// <returns>Данные уровня</returns>
         private AeroTableElem? GetLevel(double level)
         {
             AeroTableElem? res = null;
@@ -512,6 +317,10 @@ namespace AeroDiag
 
         #region diagnosticVals
 
+        /// <summary>
+        /// Получить высоту земной поверхности
+        /// </summary>
+        /// <returns>Высота [м]</returns>
         private double? GetTerrainHeight()
         {
             double? res = null;
@@ -523,6 +332,13 @@ namespace AeroDiag
             return res;
         }
 
+        /// <summary>
+        /// Получить значения простых индексов неустойчивости
+        /// </summary>
+        /// <param name="kndx">K INDEX</param>
+        /// <param name="tqndx">TQ INDEX</param>
+        /// <param name="ttndx">TT INDEX</param>
+        /// <param name="epndx">EP INDEX</param>
         private void GetInstabilityIndexes(out double? kndx, out double? tqndx, out double? ttndx, out double? epndx)
         {
             kndx = null;
@@ -585,6 +401,10 @@ namespace AeroDiag
             }
         }
 
+        /// <summary>
+        /// Получить давление на нижнем уровне зондировапния
+        /// </summary>
+        /// <returns>Давление на нижнем уровне зондирования [гПа]</returns>
         private double? GetBottomLevel()
         {
             double? res = null;
@@ -600,6 +420,10 @@ namespace AeroDiag
             return res;
         }
 
+        /// <summary>
+        /// Получить давление наиболее неустойчивого слоя
+        /// </summary>
+        /// <returns>Давление наиболее неустойчивого слоя [гПа]</returns>
         private double? GetMostUnstableLevel()
         {
             double? res = null;
@@ -650,6 +474,11 @@ namespace AeroDiag
             return maxUnstableLevel;
         }
 
+        /// <summary>
+        /// Получить температуру на уровне (НЕ ВАЛИДНЫЙ)
+        /// </summary>
+        /// <param name="level">Уровень</param>
+        /// <returns>Температура [С]</returns>
         private double? GetTemperature(double level)
         {
             double? result = null;
@@ -661,6 +490,11 @@ namespace AeroDiag
             return result;
         }
 
+        /// <summary>
+        /// Получить высоту уровня над уровнем моря
+        /// </summary>
+        /// <param name="level">Уровень</param>
+        /// <returns>Высота [м]</returns>
         private double? GetHeight(double level)
         {
             double? result = null;
@@ -672,6 +506,10 @@ namespace AeroDiag
             return result;
         }
 
+        /// <summary>
+        /// Получить количество воды в столбе атмосферы (вертикальный интеграл отношения смеси)
+        /// </summary>
+        /// <returns></returns>
         public double? GetPrecipitableWater()
         {
             double? result = null;
@@ -713,13 +551,16 @@ namespace AeroDiag
                         {
                             return result;
                         }
-                        result += (0.5 * (currentMixRat + prevMixRat) * (prevPres - currentPres)) / (9.97 * MeteoMath.GetGravity());
+                        result += (0.5 * (currentMixRat + prevMixRat) * (prevPres - currentPres)) / (9.97 * MeteoMath.gravity);
                     }
                 }
             }
             return result;
         }
 
+        /// <summary>
+        /// Получить значения параметров поднимающейся частицы
+        /// </summary>
         private void SetGammaW()
         {
             double? bottomLevel = GetBottomLevel();
@@ -771,6 +612,11 @@ namespace AeroDiag
             }
         }
 
+        /// <summary>
+        /// Получить компоненты скорости ведущего потока
+        /// </summary>
+        /// <param name="u">u-компонента</param>
+        /// <param name="v">v-компонента</param>
         private void GetStormMotion(out double? u, out double? v)
         {
             u = null;
@@ -884,6 +730,13 @@ namespace AeroDiag
             v = MeteoMath.GetV(stormSpeed, stormDirection);
         }
 
+        /// <summary>
+        /// Получить значение относительной завихренности (вертикальный интеграл векторного произведения векторов ветра и ведущего потока)
+        /// </summary>
+        /// <param name="depth">Глубина интегрирования</param>
+        /// <param name="stormU">u-компонента скорости ведущего потока</param>
+        /// <param name="stormV">v-компонента скорости ведущего потока</param>
+        /// <param name="helicity">Значение относительной завихренности (Дж\кг)</param>
         private void GetStormRelativeHelicity(double depth, double stormU, double stormV, out double? helicity)
         {
             helicity = null;
@@ -981,6 +834,14 @@ namespace AeroDiag
             helicity = srh;
         }
 
+        /// <summary>
+        /// Получение характеристик плавучести для перемешанного слоя
+        /// </summary>
+        /// <param name="depth">Глубина перемешивания</param>
+        /// <param name="plcl">Давление на уровне конденсации</param>
+        /// <param name="cape">Потенциальная доступная энергия неустойчивости</param>
+        /// <param name="cin">Энергия задерживающего слоя</param>
+        /// <param name="lftx">Индекс плавучести</param>
         public void GetML(double depth, out double? plcl, out double? cape, out double? cin, out double? lftx)
         {
             plcl = null;
@@ -1086,6 +947,18 @@ namespace AeroDiag
             GammaW(mlt, dewpoint, center, mlmr, (double)hgt, out plcl, out cape, out cin, out lftx);
         }
 
+        /// <summary>
+        /// Расчет параметров плавучести (вертикалдьное интегрирование разности температуры окружающего воздуха и поднявшейся частицы)
+        /// </summary>
+        /// <param name="temperature">Температура</param>
+        /// <param name="dewpoint">Температура точки росы</param>
+        /// <param name="pressure">Давление</param>
+        /// <param name="mixratio">Отношение смеси</param>
+        /// <param name="hgt">Высота</param>
+        /// <param name="plcl">Давление на уровне конденсации</param>
+        /// <param name="cape">Потенциальная доступная энергия неустойчивости</param>
+        /// <param name="cin">Энергия задерживающего слоя</param>
+        /// <param name="lftx">Индекс плавучести</param>
         private void GammaW(double temperature, double dewpoint, double pressure, double mixratio, double hgt, out double? plcl, out double? cape, out double? cin, out double? lftx)
         {
             plcl = null;
@@ -1211,7 +1084,7 @@ namespace AeroDiag
 
                 if (capePart > 0)
                 {                   
-                    cape += MeteoMath.GetGravity() * 0.5 * (capePartOld + capePart) * (0.1*(hInterp - hPrevInterp));
+                    cape += MeteoMath.gravity * 0.5 * (capePartOld + capePart) * (0.1*(hInterp - hPrevInterp));
                     if (!hasCape)
                     {
                         hasCape = true;
@@ -1220,7 +1093,7 @@ namespace AeroDiag
                 } 
                 else if (capePart <= 0 || !hasCape)
                 {
-                    cinTmp += MeteoMath.GetGravity() * 0.5 * (capePartOld + capePart) * (0.1 * (hInterp - hPrevInterp));
+                    cinTmp += MeteoMath.gravity * 0.5 * (capePartOld + capePart) * (0.1 * (hInterp - hPrevInterp));
                 }
 
                 if (lftx is null && p <= 500.0 && p >= 499.9)

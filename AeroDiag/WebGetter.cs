@@ -7,8 +7,18 @@ using HtmlAgilityPack;
 
 namespace AeroDiag
 {
+    /// <summary>
+    /// Получение таблицы с сервера
+    /// </summary>
     internal class WebGetter
     {
+        /// <summary>
+        /// Получение данных
+        /// </summary>
+        /// <param name="point">Код пункта</param>
+        /// <param name="dateTime">Дата и время YYYYMMDDHH</param>
+        /// <param name="result">Нераспарсенная таблица</param>
+        /// <returns>Статус получения</returns>
         public static bool TryGetAeroData(string point, string dateTime, out string result)
         {
             bool ok = false;
@@ -16,6 +26,13 @@ namespace AeroDiag
             return ok;
         }
 
+        /// <summary>
+        /// Получение данных с сервера
+        /// </summary>
+        /// <param name="point">Код пункта</param>
+        /// <param name="dateTime">Дата и время YYYYMMDDHH</param>
+        /// <param name="result">Нераспарсенная таблица</param>
+        /// <returns>Статус получения</returns>
         private static bool getTextData (string point, string dateTime, out string result)
         {
             bool ok = false;
@@ -23,6 +40,7 @@ namespace AeroDiag
             string month = dateTime.Substring(4, 2);
             string dayHour = dateTime.Substring(6);
             result = "";
+            // Строка запроса
             string query = $"http://weather.uwyo.edu/cgi-bin/sounding?region=np&TYPE=TEXT%3ALIST&YEAR={year}&MONTH={month}&FROM={dayHour}&TO={dayHour}&STNM={point}";
             try
             {
