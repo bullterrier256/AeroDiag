@@ -267,6 +267,9 @@ namespace AeroDiag
                 result += $"Mixed layer Lifted index [C]: {AeroTableElem.ValToStr(mllftx, 2, false)}\r\n";
             }
 
+            result += $"Integrated CAPE [-]: {AeroTableElem.ValToStr(GetIntegratedCape()/100, 2, false)}\r\n";
+            result += $"Integrated CAPE Ignored Bottom 500m [-]: {AeroTableElem.ValToStr(GetIntegratedCape(true) / 100, 2, false)}\r\n";
+
             return result;
         }
 
@@ -558,6 +561,69 @@ namespace AeroDiag
                             return result;
                         }
                         result += (0.5 * (currentMixRat + prevMixRat) * (prevPres - currentPres)) / (9.97 * MeteoMath.gravity);
+                    }
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Получить интегральную энергию неустойчивости
+        /// </summary>
+        /// <param name="ignore500m">Игнорировать нижние 500 м</param>
+        /// <returns></returns>
+        public double? GetIntegratedCape(bool ignore500m = false)
+        {
+            double? result = null;
+            double? bottomLevel = GetBottomLevel();
+            var elem = table.First;
+            double? prevCape = null;
+            double? prevPres = null;
+            double? currentPres = null;
+            double? currentCape = null;
+            double? terrainHeight = GetTerrainHeight();
+            double? currentHeight = terrainHeight;
+            if (terrainHeight is null)
+            {
+                return result;
+            }
+            if (bottomLevel is not null)
+            {
+                // Здесь шаг интегрирования не требуется, интегрируем методом трапеций между слоями
+                while (elem != null)
+                {
+                    elem = elem.Next;
+                    AeroTableElem tabElem = elem.Value;
+                    prevPres = currentPres;
+                    currentPres = tabElem.GetPres();
+                    currentHeight = tabElem.GetHgt();
+                    bool ignore = (ignore500m && ((double)currentHeight - (double)terrainHeight) < 500);
+                    if (currentPres is null)
+                    {
+                        break;
+                    }
+                    if (currentPres == bottomLevel)
+                    {
+                        currentCape = ignore ? 0 : tabElem.GetCape();
+                        if (currentCape is null)
+                        {
+                            return result;
+                        }
+                        result = 0;
+                    }
+                    if (currentPres < bottomLevel)
+                    {
+                        if (result is null)
+                        {
+                            result = 0;
+                        }
+                        prevCape = currentCape;
+                        currentCape = ignore ? 0 : tabElem.GetCape();
+                        if (currentCape is null)
+                        {
+                            return result;
+                        }
+                        result += (0.5 * (currentCape + prevCape) * (prevPres - currentPres));
                     }
                 }
             }
